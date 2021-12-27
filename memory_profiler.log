@@ -1,0 +1,37 @@
+Filename: src/main.py
+
+Line #    Mem usage    Increment  Occurrences   Line Contents
+=============================================================
+    36     15.0 MiB     15.0 MiB           1   @profile(stream=fp)
+    37                                         def data_flow():
+    38     18.0 MiB      3.0 MiB           1       consumer = read_data_init()
+    39     18.1 MiB      0.1 MiB           1       producer = write_data_init()
+    40     18.1 MiB      0.0 MiB           1       try:
+    41     18.1 MiB      0.0 MiB           1           while True:
+    42    125.6 MiB -699453.2 MiB     1000001               msg = consumer.poll(1.0)
+    43    125.6 MiB -699455.7 MiB     1000001               if msg is None:
+    44    100.4 MiB    -25.2 MiB           1                   break
+    45    125.6 MiB -699414.4 MiB     1000000               input_json = ujson.loads(msg.value())
+    46    125.6 MiB -699416.4 MiB     1000000               dict_uids.setdefault(input_json['ts']//60 * 60, set()).add(input_json['uid'])
+    47    125.6 MiB -699418.8 MiB     1000000               if ((input_json['ts']//60 * 60) - 60 not in processed_dates) and ((input_json['ts']//60 * 60)-60 in dict_uids) and (input_json['ts'] > (input_json['ts']//60 * 60) + 5):
+    48    117.7 MiB    -10.0 MiB          16                   dict_count[(input_json['ts']//60 * 60) - 60]= len(dict_uids[(input_json['ts']//60 * 60)-60])
+    49    117.7 MiB     -8.1 MiB          16                   producer.poll(0)
+    50    117.7 MiB     -8.1 MiB          16                   output = {}
+    51    117.7 MiB     -8.1 MiB          16                   output[(input_json['ts']//60 * 60) - 60] = dict_count[(input_json['ts']//60 * 60) - 60]
+    52    117.7 MiB     -8.1 MiB          16                   data = ujson.dumps(output)
+    53    117.7 MiB     -8.1 MiB          16                   producer.produce(output_topic, data.encode('utf-8'), callback=delivery_report)
+    54    117.7 MiB     -8.1 MiB          16                   processed_dates.add((input_json['ts']//60 * 60) - 60)
+    55    117.7 MiB     -8.1 MiB          16                   del dict_uids[(input_json['ts']//60 * 60) - 60]
+    56                                                     
+    57                                             except Exception as e:
+    58                                                 consumer.close()
+    59                                                 producer.flush()
+    60                                                 raise Exception(e)
+    61                                             
+    62    100.4 MiB     -0.0 MiB           1       consumer.close()
+    63    100.4 MiB      0.0 MiB           1       producer.flush()
+    64    100.4 MiB      0.0 MiB          19       for key in dict_uids.keys():
+    65    100.4 MiB      0.0 MiB          18           dict_count[key]= len(dict_uids[key])
+    66    100.4 MiB      0.0 MiB          18           print(dict_count[key])
+
+
